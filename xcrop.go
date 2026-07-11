@@ -24,20 +24,20 @@ const (
 	DefaultTimeout = 30 * time.Second
 
 	// Version is the SDK version.
-	Version = "1.0.0"
+	Version = "1.1.0"
 )
 
 // Client is the XCROP API client. Use NewClient to create one.
 type Client struct {
 	// Services
-	Users    *UsersService
-	Tweets   *TweetsService
-	Search   *SearchService
-	Lists    *ListsService
-	Trending *TrendingService
-	KOL      *KOLService
-	Account  *AccountService
-	Stream   *StreamService
+	Users       *UsersService
+	Tweets      *TweetsService
+	Search      *SearchService
+	Lists       *ListsService
+	Communities *CommunitiesService
+	Trending    *TrendingService
+	Account     *AccountService
+	Stream      *StreamService
 
 	http *httpClient
 }
@@ -110,8 +110,8 @@ func NewClient(apiKey string, opts ...Option) *Client {
 	c.Tweets = newTweetsService(hc)
 	c.Search = newSearchService(hc)
 	c.Lists = newListsService(hc)
+	c.Communities = newCommunitiesService(hc)
 	c.Trending = newTrendingService(hc)
-	c.KOL = newKOLService(hc)
 	c.Account = newAccountService(hc)
 	c.Stream = newStreamService(hc)
 

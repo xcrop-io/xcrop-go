@@ -88,58 +88,6 @@ func (s *TweetsService) GetQuotes(ctx context.Context, tweetID string, params *P
 	return resp.Data, resp.Meta, nil
 }
 
-// ListLikers retrieves users who liked a tweet. Returns an iterator.
-func (s *TweetsService) ListLikers(ctx context.Context, tweetID string, params *PaginationParams) *Iterator[User] {
-	if tweetID == "" {
-		return errIterator[User](fmt.Errorf("xcrop: tweetId must not be empty"))
-	}
-	query := buildPaginationQuery(params)
-	return newIterator(ctx, makePaginatedFetcher[User](s.http, "GET", "/tweets/"+tweetID+"/likers", query, nil))
-}
-
-// GetLikers retrieves a single page of users who liked a tweet.
-func (s *TweetsService) GetLikers(ctx context.Context, tweetID string, params *PaginationParams) ([]User, Meta, error) {
-	if tweetID == "" {
-		return nil, Meta{}, fmt.Errorf("xcrop: tweetId must not be empty")
-	}
-	var resp UsersResponse
-	err := s.http.do(ctx, requestOptions{
-		method: "GET",
-		path:   "/tweets/" + tweetID + "/likers",
-		query:  buildPaginationQuery(params),
-	}, &resp)
-	if err != nil {
-		return nil, Meta{}, err
-	}
-	return resp.Data, resp.Meta, nil
-}
-
-// ListRetweeters retrieves users who retweeted a tweet. Returns an iterator.
-func (s *TweetsService) ListRetweeters(ctx context.Context, tweetID string, params *PaginationParams) *Iterator[User] {
-	if tweetID == "" {
-		return errIterator[User](fmt.Errorf("xcrop: tweetId must not be empty"))
-	}
-	query := buildPaginationQuery(params)
-	return newIterator(ctx, makePaginatedFetcher[User](s.http, "GET", "/tweets/"+tweetID+"/retweeters", query, nil))
-}
-
-// GetRetweeters retrieves a single page of users who retweeted a tweet.
-func (s *TweetsService) GetRetweeters(ctx context.Context, tweetID string, params *PaginationParams) ([]User, Meta, error) {
-	if tweetID == "" {
-		return nil, Meta{}, fmt.Errorf("xcrop: tweetId must not be empty")
-	}
-	var resp UsersResponse
-	err := s.http.do(ctx, requestOptions{
-		method: "GET",
-		path:   "/tweets/" + tweetID + "/retweeters",
-		query:  buildPaginationQuery(params),
-	}, &resp)
-	if err != nil {
-		return nil, Meta{}, err
-	}
-	return resp.Data, resp.Meta, nil
-}
-
 // BatchGet retrieves multiple tweets by IDs in a single request. Max 100.
 func (s *TweetsService) BatchGet(ctx context.Context, tweetIDs []string) ([]Tweet, error) {
 	if len(tweetIDs) == 0 {
@@ -344,27 +292,6 @@ func (s *TweetsService) Unretweet(ctx context.Context, tweetID string) (*WriteRe
 type InteractionCheckResponse struct {
 	Data InteractionCheck `json:"data"`
 	Meta Meta             `json:"meta"`
-}
-
-// CheckLike checks if a user liked a tweet.
-// Note: X has hidden likes, so this may be unavailable.
-func (s *TweetsService) CheckLike(ctx context.Context, tweetID, username string) (*InteractionCheck, error) {
-	if tweetID == "" {
-		return nil, fmt.Errorf("xcrop: tweetId must not be empty")
-	}
-	if username == "" {
-		return nil, fmt.Errorf("xcrop: username must not be empty")
-	}
-	var resp InteractionCheckResponse
-	err := s.http.do(ctx, requestOptions{
-		method: "GET",
-		path:   "/tweets/" + tweetID + "/check-like",
-		query:  map[string]string{"username": username},
-	}, &resp)
-	if err != nil {
-		return nil, err
-	}
-	return &resp.Data, nil
 }
 
 // CheckRetweet checks if a user retweeted a tweet.

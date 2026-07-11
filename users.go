@@ -3,6 +3,7 @@ package xcrop
 import (
 	"context"
 	"fmt"
+	"strconv"
 )
 
 // UsersService handles user-related API endpoints.
@@ -230,24 +231,33 @@ func (s *UsersService) GetVerifiedFollowers(ctx context.Context, username string
 	return resp.Data, resp.Meta, nil
 }
 
-// ListLikes retrieves tweets liked by a user. Returns an iterator for automatic pagination.
-func (s *UsersService) ListLikes(ctx context.Context, username string, params *PaginationParams) *Iterator[Tweet] {
-	if username == "" {
-		return errIterator[Tweet](fmt.Errorf("xcrop: username must not be empty"))
-	}
-	query := buildPaginationQuery(params)
-	return newIterator(ctx, makePaginatedFetcher[Tweet](s.http, "GET", "/users/"+username+"/likes", query, nil))
+// FollowerIDsResponse wraps a list of follower IDs with metadata.
+type FollowerIDsResponse struct {
+	Data []string `json:"data"`
+	Meta Meta     `json:"meta"`
 }
 
-// GetLikes retrieves a single page of liked tweets.
-func (s *UsersService) GetLikes(ctx context.Context, username string, params *PaginationParams) ([]Tweet, Meta, error) {
+// ListFollowerIDs retrieves follower IDs of a user. Returns an iterator for automatic
+// pagination. This is a lightweight bulk endpoint (no profile metadata, up to 5000
+// IDs per page) — cheaper and faster than ListFollowers for large-scale ID harvesting.
+func (s *UsersService) ListFollowerIDs(ctx context.Context, username string, params *PaginationParams) *Iterator[string] {
+	if username == "" {
+		return errIterator[string](fmt.Errorf("xcrop: username must not be empty"))
+	}
+	query := buildPaginationQuery(params)
+	return newIterator(ctx, makePaginatedFetcher[string](s.http, "GET", "/users/"+username+"/followers-ids", query, nil))
+}
+
+// GetFollowerIDs retrieves a single page of follower IDs (up to 5000 per call, no
+// profile metadata — cheaper/faster than GetFollowers for bulk ID harvesting).
+func (s *UsersService) GetFollowerIDs(ctx context.Context, username string, params *PaginationParams) ([]string, Meta, error) {
 	if username == "" {
 		return nil, Meta{}, fmt.Errorf("xcrop: username must not be empty")
 	}
-	var resp TweetsResponse
+	var resp FollowerIDsResponse
 	err := s.http.do(ctx, requestOptions{
 		method: "GET",
-		path:   "/users/" + username + "/likes",
+		path:   "/users/" + username + "/followers-ids",
 		query:  buildPaginationQuery(params),
 	}, &resp)
 	if err != nil {
@@ -281,27 +291,94 @@ func (s *UsersService) BatchGet(ctx context.Context, usernames []string) ([]User
 	return resp.Data, nil
 }
 
-// RelationshipResponse wraps a relationship check result.
-type RelationshipResponse struct {
+// CheckFollowResponse wraps a follow-relationship check result.
+type CheckFollowResponse struct {
 	Data Relationship `json:"data"`
 	Meta Meta         `json:"meta"`
 }
 
-// GetRelationship checks the follow relationship between two users.
-func (s *UsersService) GetRelationship(ctx context.Context, source, target string) (*Relationship, error) {
+// CheckFollow checks the follow relationship between two users (whether source follows
+// target, and whether target follows source back).
+func (s *UsersService) CheckFollow(ctx context.Context, source, target string) (*Relationship, error) {
 	if source == "" {
 		return nil, fmt.Errorf("xcrop: source username must not be empty")
 	}
 	if target == "" {
 		return nil, fmt.Errorf("xcrop: target username must not be empty")
 	}
-	var resp RelationshipResponse
+	var resp CheckFollowResponse
 	err := s.http.do(ctx, requestOptions{
 		method: "GET",
-		path:   "/users/relationship",
+		path:   "/users/check-follow",
 		query: map[string]string{
 			"source": source,
 			"target": target,
+		},
+	}, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp.Data, nil
+}
+
+// QualifiedAccountResponse wraps a check-qualified-account result.
+type QualifiedAccountResponse struct {
+	Data QualifiedAccountResult `json:"data"`
+	Meta Meta                  `json:"meta"`
+}
+
+// CheckQualifiedAccount checks whether a user meets minimum followers and minimum
+// account-age (in days) requirements. Reads the public profile only — no connected
+// account required. Useful for giveaway/airdrop eligibility gating.
+func (s *UsersService) CheckQualifiedAccount(ctx context.Context, username string, minFollowers, minAgeDays int) (*QualifiedAccountResult, error) {
+	if username == "" {
+		return nil, fmt.Errorf("xcrop: username must not be empty")
+	}
+	query := make(map[string]string)
+	if minFollowers > 0 {
+		query["min_followers"] = strconv.Itoa(minFollowers)
+	}
+	if minAgeDays > 0 {
+		query["min_age_days"] = strconv.Itoa(minAgeDays)
+	}
+	var resp QualifiedAccountResponse
+	err := s.http.do(ctx, requestOptions{
+		method: "GET",
+		path:   "/users/" + username + "/check-qualified-account",
+		query:  query,
+	}, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp.Data, nil
+}
+
+// QualifiedNameResponse wraps a check-qualified-name result.
+type QualifiedNameResponse struct {
+	Data QualifiedNameResult `json:"data"`
+	Meta Meta                `json:"meta"`
+}
+
+// CheckQualifiedName checks whether a user's display name contains the given text.
+// position controls where the match must occur: "anywhere" (default), "left"
+// (starts-with), or "right" (ends-with). Useful for giveaway/campaign gating.
+func (s *UsersService) CheckQualifiedName(ctx context.Context, username, contains, position string) (*QualifiedNameResult, error) {
+	if username == "" {
+		return nil, fmt.Errorf("xcrop: username must not be empty")
+	}
+	if contains == "" {
+		return nil, fmt.Errorf("xcrop: contains must not be empty")
+	}
+	if position == "" {
+		position = "anywhere"
+	}
+	var resp QualifiedNameResponse
+	err := s.http.do(ctx, requestOptions{
+		method: "GET",
+		path:   "/users/" + username + "/check-qualified-name",
+		query: map[string]string{
+			"contains": contains,
+			"position": position,
 		},
 	}, &resp)
 	if err != nil {

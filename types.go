@@ -115,12 +115,40 @@ type TrendingTopic struct {
 	DomainContext string `json:"domain_context,omitempty"`
 }
 
-// Relationship represents the follow relationship between two users.
+// Relationship represents the follow relationship between two users, as returned by
+// GET /users/check-follow.
 type Relationship struct {
-	SourceFollowsTarget bool `json:"source_follows_target"`
-	TargetFollowsSource bool `json:"target_follows_source"`
-	Blocking            bool `json:"blocking"`
-	Muting              bool `json:"muting"`
+	Source              string `json:"source"`
+	Target              string `json:"target"`
+	SourceFollowsTarget bool   `json:"source_follows_target"`
+	TargetFollowsSource bool   `json:"target_follows_source"`
+}
+
+// QualifiedAccountResult represents the result of a check-qualified-account eligibility
+// check (minimum followers + minimum account age). Used for giveaway/airdrop gating.
+type QualifiedAccountResult struct {
+	Qualified      bool `json:"qualified"`
+	Followers      int  `json:"followers"`
+	AccountAgeDays int  `json:"accountAgeDays"`
+}
+
+// QualifiedNameResult represents the result of a check-qualified-name eligibility check
+// (display name contains required text at a given position). Used for giveaway gating.
+type QualifiedNameResult struct {
+	Qualified bool   `json:"qualified"`
+	Name      string `json:"name"`
+}
+
+// Community represents an X/Twitter Community.
+//
+// Beta: the communities endpoints are under active development on the API and may
+// currently return a 503 Service Unavailable. The exact shape of this type may change
+// as the backend integration is finalized.
+type Community struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	MemberCount int    `json:"member_count,omitempty"`
 }
 
 // AccountStatus represents the connected X account status.
@@ -205,10 +233,4 @@ func (p ConnectParams) GoString() string {
 		totp = ", TOTPSecret: \"[REDACTED]\""
 	}
 	return "xcrop.ConnectParams{Username: \"" + p.Username + "\", Password: \"[REDACTED]\"" + totp + "}"
-}
-
-// KOLTimelineParams specifies parameters for the KOL timeline endpoint.
-type KOLTimelineParams struct {
-	Usernames []string
-	Count     int
 }

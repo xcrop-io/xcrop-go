@@ -40,13 +40,15 @@ func main() {
 
 ## Features
 
-- **41 API endpoints** — users, tweets, search, lists, trending, KOL timeline, write operations, interaction checks
+- **39 API endpoints** — users, tweets, search, lists, communities, trending, account monitoring, write operations, interaction checks, eligibility checks
 - **Auto-retry** — exponential backoff on 429 (rate limit) and 5xx (server error), max 3 retries
 - **Pagination iterator** — iterate through pages automatically with `Next()`/`Item()` pattern
 - **Context support** — all methods accept `context.Context` for cancellation and timeouts
 - **Configurable** — custom HTTP client, base URL, timeout, max retries
 - **Typed errors** — `*xcrop.APIError` with status code, message, and error code
 - **Zero dependencies** — only Go standard library
+
+Rate limits are per API key, by plan: **60 req/min (Starter)**, **300 req/min (Basic)**, **600 req/min (Pro)**, **300 req/min (PAYG)**. All 39 endpoints — including Write API and interaction/eligibility checks — are available on every plan, including the free Starter tier; plans differ only by monthly credits, rate limit, and credit price.
 
 ## Usage
 
@@ -84,8 +86,8 @@ followers, meta, err := client.Users.GetFollowers(ctx, "elonmusk", &xcrop.Pagina
 // Batch lookup (max 100 usernames)
 users, err := client.Users.BatchGet(ctx, []string{"elonmusk", "jack", "vaborCFA"})
 
-// Check relationship
-rel, err := client.Users.GetRelationship(ctx, "elonmusk", "jack")
+// Check follow relationship between two users
+rel, err := client.Users.CheckFollow(ctx, "elonmusk", "jack")
 fmt.Println(rel.SourceFollowsTarget) // true/false
 
 // Other user endpoints
@@ -93,8 +95,12 @@ mentions, meta, err := client.Users.GetMentions(ctx, "elonmusk", params)
 replies, meta, err := client.Users.GetReplies(ctx, "elonmusk", params)
 media, meta, err := client.Users.GetMedia(ctx, "elonmusk", params)
 verified, meta, err := client.Users.GetVerifiedFollowers(ctx, "elonmusk", params)
-likes, meta, err := client.Users.GetLikes(ctx, "elonmusk", params)
 following, meta, err := client.Users.GetFollowing(ctx, "elonmusk", params)
+ids, meta, err := client.Users.GetFollowerIDs(ctx, "elonmusk", &xcrop.PaginationParams{Count: 5000})
+
+// Eligibility checks — for giveaway/airdrop gating
+qa, err := client.Users.CheckQualifiedAccount(ctx, "elonmusk", 100, 30) // min 100 followers, 30 days old
+qn, err := client.Users.CheckQualifiedName(ctx, "elonmusk", "Musk", "anywhere")
 ```
 
 ### Tweets
@@ -108,10 +114,8 @@ replies, meta, err := client.Tweets.GetConversation(ctx, "1234567890", &xcrop.Pa
     Count: 50,
 })
 
-// Get quote tweets, likers, retweeters
+// Get quote tweets
 quotes, meta, err := client.Tweets.GetQuotes(ctx, "1234567890", params)
-likers, meta, err := client.Tweets.GetLikers(ctx, "1234567890", params)
-retweeters, meta, err := client.Tweets.GetRetweeters(ctx, "1234567890", params)
 
 // Batch lookup (max 100 IDs)
 tweets, err := client.Tweets.BatchGet(ctx, []string{"123", "456", "789"})
@@ -191,7 +195,25 @@ members, meta, err := client.Lists.GetMembers(ctx, "1234567890", params)
 subscribers, meta, err := client.Lists.GetSubscribers(ctx, "1234567890", params)
 ```
 
-### Trending & KOL
+### Communities
+
+Beta — these endpoints are under active development on the API and currently return a `503 Service Unavailable` while the backend integration is finished. Check `xcrop.IsServerError(err)` and retry later.
+
+```go
+community, err := client.Communities.Get(ctx, "1708766018985501165")
+
+tweets, meta, err := client.Communities.GetTweets(ctx, "1708766018985501165", &xcrop.CommunityListParams{
+    Count: 20,
+    Sort:  "latest", // "latest" | "popular" | "engagement"
+})
+
+members, meta, err := client.Communities.GetMembers(ctx, "1708766018985501165", &xcrop.CommunityListParams{
+    Count: 20,
+    Sort:  "default", // "default" | "followers" | "name"
+})
+```
+
+### Trending & Account Monitoring
 
 ```go
 // Trending topics
@@ -200,11 +222,9 @@ for _, t := range topics {
     fmt.Printf("%s (%d tweets)\n", t.Name, t.TweetCount)
 }
 
-// KOL timeline (merged feed from multiple users)
-tweets, meta, err := client.KOL.Timeline(ctx, &xcrop.KOLTimelineParams{
-    Usernames: []string{"elonmusk", "vaborCFA", "CryptoCapo_"},
-    Count:     50,
-})
+// Account monitoring — track key accounts via tweets/mentions/replies polling
+// or the real-time stream (see below), and gate campaigns with the eligibility
+// checks under client.Users (CheckQualifiedAccount / CheckQualifiedName).
 ```
 
 ### Write Operations
@@ -246,9 +266,9 @@ client.Users.Unfollow(ctx, "elonmusk")
 client.Account.Disconnect(ctx)
 ```
 
-### Interaction Checks
+### Interaction & Eligibility Checks
 
-Check if a user performed specific interactions on a tweet. Does not require a connected account.
+Check if a user performed specific interactions on a tweet, or whether an account meets campaign eligibility criteria. Does not require a connected account — uses pool accounts.
 
 ```go
 // Check if user retweeted
@@ -259,8 +279,12 @@ fmt.Println(check.Found) // true or false
 client.Tweets.CheckReply(ctx, "1234567890", "elonmusk")
 client.Tweets.CheckQuote(ctx, "1234567890", "elonmusk")
 
-// Check like (note: X has hidden likes, may be unavailable)
-client.Tweets.CheckLike(ctx, "1234567890", "elonmusk")
+// Check follow relationship between two users
+client.Users.CheckFollow(ctx, "elonmusk", "jack")
+
+// Eligibility gating (giveaway/airdrop/campaign verification)
+client.Users.CheckQualifiedAccount(ctx, "elonmusk", 100, 30) // min followers, min account age (days)
+client.Users.CheckQualifiedName(ctx, "elonmusk", "Musk", "anywhere")
 ```
 
 ### Error Handling
@@ -313,14 +337,27 @@ Full API documentation: [https://xcrop.io/docs](https://xcrop.io/docs)
 
 | Service | Description |
 |---------|-------------|
-| `client.Users` | User profiles, tweets, followers, following, mentions, replies, media, likes, batch, relationship, follow/unfollow |
-| `client.Tweets` | Single tweet, conversation, quotes, likers, retweeters, batch, create/reply/quote/delete, like/unlike, retweet/unretweet, interaction checks |
+| `client.Users` | User profiles, tweets, followers, follower IDs, following, mentions, replies, media, verified-followers, batch, check-follow, follow/unfollow, eligibility checks (qualified-account, qualified-name) |
+| `client.Tweets` | Single tweet, conversation, quotes, batch, create/reply/quote/delete, like/unlike, retweet/unretweet, interaction checks (retweet/reply/quote) |
 | `client.Search` | Tweet search, user search |
 | `client.Lists` | List tweets, members, subscribers |
+| `client.Communities` | Community details, tweets, members (beta — may return 503) |
 | `client.Trending` | Trending topics |
-| `client.KOL` | KOL merged timeline |
-| `client.Account` | Connect/disconnect X account, check status |
+| `client.Account` | Connect/disconnect X account, check status — for account monitoring and Write API |
 | `client.Stream` | SSE real-time stream |
+
+### Rate Limits & Pricing
+
+| Plan | Rate limit | Notes |
+|------|------------|-------|
+| Starter (free) | 60 req/min | All 39 endpoints available, limited monthly credits |
+| Basic | 300 req/min | |
+| Pro | 600 req/min | |
+| Pay-as-you-go | 300 req/min | |
+
+Every plan can call every endpoint — Write API and interaction/eligibility checks included — plans differ only by monthly credits, rate limit, and credit price. See [https://xcrop.io/pricing](https://xcrop.io/pricing) for current credit rates.
+
+Billing accepts crypto (USDT/USDC on BEP-20, SOL, POL). Card payments via Stripe are coming soon.
 
 ### Real-time Stream (SSE)
 
