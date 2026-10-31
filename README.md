@@ -1,6 +1,6 @@
 # xcrop-go
 
-Go client library for the [XCROP API](https://xcrop.io) — X/Twitter data intelligence platform.
+Go client library for the [XCROP API](https://xcrop.io), the X/Twitter data intelligence platform.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/xcrop-io/xcrop-go.svg)](https://pkg.go.dev/github.com/xcrop-io/xcrop-go)
 
@@ -10,7 +10,7 @@ Go client library for the [XCROP API](https://xcrop.io) — X/Twitter data intel
 go get github.com/xcrop-io/xcrop-go
 ```
 
-Requires Go 1.21+. Zero external dependencies — uses only the standard library.
+Requires Go 1.21+. Zero external dependencies: it uses only the standard library.
 
 ## Quick Start
 
@@ -40,15 +40,15 @@ func main() {
 
 ## Features
 
-- **39 API endpoints** — users, tweets, search, lists, communities, trending, account monitoring, write operations, interaction checks, eligibility checks
-- **Auto-retry** — exponential backoff on 429 (rate limit) and 5xx (server error), max 3 retries
-- **Pagination iterator** — iterate through pages automatically with `Next()`/`Item()` pattern
-- **Context support** — all methods accept `context.Context` for cancellation and timeouts
-- **Configurable** — custom HTTP client, base URL, timeout, max retries
-- **Typed errors** — `*xcrop.APIError` with status code, message, and error code
-- **Zero dependencies** — only Go standard library
+- **42 API endpoints**: users, tweets, search, lists, communities, trending, account monitoring, write operations, interaction checks, eligibility checks
+- **Auto-retry**: exponential backoff on 429 (rate limit) and 5xx (server error), max 3 retries
+- **Pagination iterator**: iterate through pages automatically with `Next()`/`Item()` pattern
+- **Context support**: all methods accept `context.Context` for cancellation and timeouts
+- **Configurable**: custom HTTP client, base URL, timeout, max retries
+- **Typed errors**: `*xcrop.APIError` with status code, message, and error code
+- **Zero dependencies**: only Go standard library
 
-Rate limits are per API key, by plan: **60 req/min (Starter)**, **300 req/min (Basic)**, **600 req/min (Pro)**, **300 req/min (PAYG)**. All 39 endpoints — including Write API and interaction/eligibility checks — are available on every plan, including the free Starter tier; plans differ only by monthly credits, rate limit, and credit price.
+Rate limits are per API key, by plan: **60 req/min (Starter)**, **300 req/min (Basic)**, **600 req/min (Pro)**, **300 req/min (PAYG)**. All 42 endpoints, including Write API and interaction/eligibility checks, are available on every plan, including the free Starter tier; plans differ only by monthly credits, rate limit, and credit price.
 
 ## Usage
 
@@ -98,7 +98,7 @@ verified, meta, err := client.Users.GetVerifiedFollowers(ctx, "elonmusk", params
 following, meta, err := client.Users.GetFollowing(ctx, "elonmusk", params)
 ids, meta, err := client.Users.GetFollowerIDs(ctx, "elonmusk", &xcrop.PaginationParams{Count: 5000})
 
-// Eligibility checks — for giveaway/airdrop gating
+// Eligibility checks for giveaway/airdrop gating
 qa, err := client.Users.CheckQualifiedAccount(ctx, "elonmusk", 100, 30) // min 100 followers, 30 days old
 qn, err := client.Users.CheckQualifiedName(ctx, "elonmusk", "Musk", "anywhere")
 ```
@@ -159,7 +159,7 @@ for iter.Next() {
 All list endpoints have both single-page (`Get*`) and iterator (`List*`) variants.
 
 ```go
-// Iterator pattern — automatically fetches next pages
+// Iterator pattern: automatically fetches next pages
 iter := client.Users.ListTweets(ctx, "elonmusk", &xcrop.PaginationParams{Count: 100})
 for iter.Next() {
     tweet := iter.Item()
@@ -197,7 +197,7 @@ subscribers, meta, err := client.Lists.GetSubscribers(ctx, "1234567890", params)
 
 ### Communities
 
-Beta — these endpoints are under active development on the API and currently return a `503 Service Unavailable` while the backend integration is finished. Check `xcrop.IsServerError(err)` and retry later.
+Beta: these endpoints are under active development on the API and currently return a `503 Service Unavailable` while the backend integration is finished. Check `xcrop.IsServerError(err)` and retry later.
 
 ```go
 community, err := client.Communities.Get(ctx, "1708766018985501165")
@@ -222,7 +222,7 @@ for _, t := range topics {
     fmt.Printf("%s (%d tweets)\n", t.Name, t.TweetCount)
 }
 
-// Account monitoring — track key accounts via tweets/mentions/replies polling
+// Account monitoring: track key accounts via tweets/mentions/replies polling
 // or the real-time stream (see below), and gate campaigns with the eligibility
 // checks under client.Users (CheckQualifiedAccount / CheckQualifiedName).
 ```
@@ -268,7 +268,7 @@ client.Account.Disconnect(ctx)
 
 ### Interaction & Eligibility Checks
 
-Check if a user performed specific interactions on a tweet, or whether an account meets campaign eligibility criteria. Does not require a connected account — uses pool accounts.
+Check if a user performed specific interactions on a tweet, or whether an account meets campaign eligibility criteria. Does not require a connected account: it uses pool accounts.
 
 ```go
 // Check if user retweeted
@@ -341,21 +341,21 @@ Full API documentation: [https://xcrop.io/docs](https://xcrop.io/docs)
 | `client.Tweets` | Single tweet, conversation, quotes, batch, create/reply/quote/delete, like/unlike, retweet/unretweet, interaction checks (retweet/reply/quote) |
 | `client.Search` | Tweet search, user search |
 | `client.Lists` | List tweets, members, subscribers |
-| `client.Communities` | Community details, tweets, members (beta — may return 503) |
+| `client.Communities` | Community details, tweets, members (beta, may return 503) |
 | `client.Trending` | Trending topics |
-| `client.Account` | Connect/disconnect X account, check status — for account monitoring and Write API |
+| `client.Account` | Connect/disconnect X account, check status, for account monitoring and Write API |
 | `client.Stream` | SSE real-time stream |
 
 ### Rate Limits & Pricing
 
 | Plan | Rate limit | Notes |
 |------|------------|-------|
-| Starter (free) | 60 req/min | All 39 endpoints available, limited monthly credits |
+| Starter (free) | 60 req/min | All 42 endpoints available, limited monthly credits |
 | Basic | 300 req/min | |
 | Pro | 600 req/min | |
 | Pay-as-you-go | 300 req/min | |
 
-Every plan can call every endpoint — Write API and interaction/eligibility checks included — plans differ only by monthly credits, rate limit, and credit price. See [https://xcrop.io/pricing](https://xcrop.io/pricing) for current credit rates.
+Every plan can call every endpoint, Write API and interaction/eligibility checks included. Plans differ only by monthly credits, rate limit, and credit price. See [https://xcrop.io/pricing](https://xcrop.io/pricing) for current credit rates.
 
 Billing accepts crypto (USDT/USDC on BEP-20, SOL, POL). Card payments via Stripe are coming soon.
 
