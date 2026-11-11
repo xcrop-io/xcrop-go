@@ -40,7 +40,7 @@ func main() {
 
 ## Features
 
-- **43 API endpoints**: users, tweets, search, lists, communities, trending, account monitoring, write operations, interaction checks, eligibility checks
+- **44 API endpoints**: users, tweets, search, lists, communities, trending, account monitoring, write operations, interaction checks, eligibility checks
 - **Auto-retry**: exponential backoff on 429 (rate limit) and 5xx (server error), max 3 retries
 - **Pagination iterator**: iterate through pages automatically with `Next()`/`Item()` pattern
 - **Context support**: all methods accept `context.Context` for cancellation and timeouts
@@ -48,7 +48,7 @@ func main() {
 - **Typed errors**: `*xcrop.APIError` with status code, message, and error code
 - **Zero dependencies**: only Go standard library
 
-Rate limits are per API key, by plan: **60 req/min (Starter)**, **300 req/min (Basic)**, **600 req/min (Pro)**, **300 req/min (PAYG)**. All 43 endpoints, including Write API and interaction/eligibility checks, are available on every plan, including the free Starter tier; plans differ only by monthly credits, rate limit, and credit price.
+Rate limits are per API key, by plan: **60 req/min (Starter)**, **300 req/min (Basic)**, **600 req/min (Pro)**, **300 req/min (PAYG)**. All 44 endpoints, including Write API and interaction/eligibility checks, are available on every plan, including the free Starter tier; plans differ only by monthly credits, rate limit, and credit price.
 
 ## Usage
 
@@ -350,7 +350,7 @@ Full API documentation: [https://xcrop.io/docs](https://xcrop.io/docs)
 
 | Plan | Rate limit | Notes |
 |------|------------|-------|
-| Starter (free) | 60 req/min | All 43 endpoints available, limited monthly credits |
+| Starter (free) | 60 req/min | All 44 endpoints available, limited monthly credits |
 | Basic | 300 req/min | |
 | Pro | 600 req/min | |
 | Pay-as-you-go | 300 req/min | |
